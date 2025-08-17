@@ -1,0 +1,66 @@
+<index html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>RGB実験</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; height: 100%; width: 100%;
+  }
+  #display {
+    width: 100%; height: 100%; background-color: black; transition: background-color 0.5s;
+  }
+  #buttons {
+    position: fixed; bottom: 10px; left: 0; width: 100%;
+    display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;
+  }
+  button {
+    padding: 15px 20px; font-size: 18px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<div id="display"></div>
+<div id="buttons">
+  <button id="btn-red">赤</button>
+  <button id="btn-green">緑</button>
+  <button id="btn-blue">青</button>
+  <button id="btn-cyan">シアン</button>
+  <button id="btn-magenta">マゼンタ</button>
+  <button id="btn-yellow">イエロー</button>
+  <button id="btn-white">白</button>
+  <button id="btn-auto">連続</button>
+</div>
+
+<script>
+const display = document.getElementById('display');
+let autoInterval = null;
+
+const setColor = (color) => {
+  clearInterval(autoInterval);
+  display.style.backgroundColor = color;
+};
+
+document.getElementById('btn-red').addEventListener('click', () => setColor('rgb(255,0,0)'));
+document.getElementById('btn-green').addEventListener('click', () => setColor('rgb(0,255,0)'));
+document.getElementById('btn-blue').addEventListener('click', () => setColor('rgb(0,0,255)'));
+document.getElementById('btn-cyan').addEventListener('click', () => setColor('rgb(0,255,255)'));
+document.getElementById('btn-magenta').addEventListener('click', () => setColor('rgb(255,0,255)'));
+document.getElementById('btn-yellow').addEventListener('click', () => setColor('rgb(255,255,0)'));
+document.getElementById('btn-white').addEventListener('click', () => setColor('rgb(255,255,255)'));
+
+document.getElementById('btn-auto').addEventListener('click', () => {
+  clearInterval(autoInterval);
+  let r=255, g=0, b=0;
+  let dr=-1, dg=1, db=0;
+  autoInterval = setInterval(() => {
+    r+=dr; g+=dg; b+=db;
+    if (r===255 && g===0 && b===0){ dr=-1; dg=1; db=0; }
+    if (r===0 && g===255 && b===0){ dr=0; dg=-1; db=1; }
+    if (r===0 && g===0 && b===255){ dr=1; dg=0; db=-1; }
+    display.style.backgroundColor = `rgb(${r},${g},${b})`;
+  }, 10);
+});
+</script>
+</body>
+</html>
