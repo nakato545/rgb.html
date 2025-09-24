@@ -1,48 +1,29 @@
 <index html>
 
-<!DOCTYPE html>
-<html lang="ja">
+    <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>プログラム選択ページ</title>
+<title>3つのシミュレーション統合ページ</title>
+<script src="https://cdn.jsdelivr.net/npm/p5@1.4.2/lib/p5.js"></script>
 <style>
-body { font-family:sans-serif; text-align:center; background:#f7f7f7; }
-button { font-size:20px; margin:20px; padding:10px 20px; }
-iframe { width: 95%; height: 90vh; border:1px solid #ccc; display:none; margin-top:20px; }
-</style>
-</head>
-<body>
-
-<h1>プログラム選択ページ</h1>
-<p>下のボタンをクリックしてプログラムを表示します</p>
-
-<button onclick="showProgram('soccer')">⚽ サッカー二次関数シミュレーション</button>
-<button onclick="showProgram('antenna')">📡 放物線アンテナシミュレーション</button>
-<button onclick="showProgram('montecarlo')">🔴 モンテカルロ法でπを求める</button>
-
-<iframe id="progFrame"></iframe>
-
-<script>
-function showProgram(name){
-    const iframe = document.getElementById('progFrame');
-    iframe.style.display = 'block';
-    if(name==='soccer'){
-        iframe.srcdoc = `<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<title>サッカー二次関数シミュレーション</title>
-<style>
-body { font-family:sans-serif; text-align:center; background:#f7f7f7; }
-canvas { background:#fff; border:1px solid #bbb; }
-.controls { margin-top:10px; }
+body { font-family:sans-serif; text-align:center; background:#f7f7f7; margin:0; padding:0; }
+canvas { border:1px solid #bbb; display:block; margin:auto; background:#fff; }
 button,input[type=range] { margin:5px; }
-#formula { position:absolute; background:rgba(255,255,255,0.8); padding:4px; font-weight:bold; bottom:40px; left:60px; }
-#bigmsg { position:absolute; left:50%; top:45%; transform:translate(-50%,-50%); font-size:48px; font-weight:bold; color:#0a6; display:none; }
+.section { display:none; padding:10px; }
+#menu { margin-top:50px; }
 </style>
 </head>
 <body>
 
+<div id="menu">
+<h1>シミュレーション選択</h1>
+<button onclick="showSection('soccer')">⚽ サッカー二次関数シミュレーション</button><br>
+<button onclick="showSection('antenna')">📡 放物線アンテナと光線シミュレーション</button><br>
+<button onclick="showSection('montecarlo')">🎲 モンテカルロ法でπを求める</button>
+</div>
+
+<!-- 1つ目: サッカー二次関数 -->
+<div id="soccer" class="section">
 <h2>⚽ サッカーと二次関数</h2>
 <div style="position:relative; display:inline-block;">
 <canvas id="cv" width="900" height="600"></canvas>
@@ -80,162 +61,10 @@ y = -0.6 (x - b/1.2)<sup>2</sup> + b<sup>2</sup>/1.2
 </ul>
 </div>
 </div>
+</div>
 
-<script>
-const canvas = document.getElementById('cv');
-const ctx = canvas.getContext('2d');
-const a = -0.6;
-let Mx = parseFloat(document.getElementById('mx').value);
-let My = parseFloat(document.getElementById('my').value);
-let b=0, xv=0, yv=0;
-let path = [], animing=false, animX=0, trail=[];
-let dxPerFrame = 0.05;
-const scaleX = (canvas.width-120)/15;
-const scaleY = (canvas.height-120)/30;
-const margin=60;
-let showAxes = document.getElementById('axisToggle').checked;
-const formulaBox = document.getElementById('formula');
-const bigmsg = document.getElementById('bigmsg');
-
-function computeB(){return (My + Math.abs(a)*Mx*Mx)/Mx;}
-function parab(x){return a*x*x + b*x;}
-function computeVertex(){xv=-b/(2*a); yv=parab(xv);}
-function computePath(){ path=[]; for(let x=0;x<=15;x+=0.02){path.push({x,y:parab(x)});} }
-function toCanvasX(x){return margin + x*scaleX;}
-function toCanvasY(y){return canvas.height - margin - y*scaleY;}
-
-function draw(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-
-    if(showAxes){
-        ctx.strokeStyle="#ddd"; ctx.lineWidth=1;
-        for(let x=0;x<=15;x++){ctx.beginPath(); ctx.moveTo(toCanvasX(x), margin/2); ctx.lineTo(toCanvasX(x), canvas.height-margin/2); ctx.stroke();}
-        for(let y=0;y<=30;y++){ctx.beginPath(); ctx.moveTo(margin/2, toCanvasY(y)); ctx.lineTo(canvas.width-margin/2, toCanvasY(y)); ctx.stroke();}
-        ctx.fillStyle="#333"; ctx.font="12px sans-serif";
-        for(let x=0;x<=15;x++){ctx.fillText(x, toCanvasX(x)-6, canvas.height-margin+14);}
-        for(let y=0;y<=30;y++){ctx.fillText(y, 6, toCanvasY(y)+4);}
-    }
-
-    ctx.beginPath();
-    for(let i=0;i<path.length;i++){
-        let p=path[i];
-        if(i==0) ctx.moveTo(toCanvasX(p.x), toCanvasY(p.y));
-        else ctx.lineTo(toCanvasX(p.x), toCanvasY(p.y));
-    }
-    ctx.setLineDash([6,6]);
-    ctx.strokeStyle="#4b6fbf"; ctx.lineWidth=2; ctx.stroke();
-    ctx.setLineDash([]);
-
-    ctx.fillStyle="#000"; ctx.beginPath(); ctx.arc(toCanvasX(0), toCanvasY(0), 6,0,Math.PI*2); ctx.fill();
-    ctx.fillText(`選手 (0,0)`, toCanvasX(0)+10, toCanvasY(0)-8);
-
-    ctx.fillStyle="#d9534f"; ctx.beginPath(); ctx.arc(toCanvasX(Mx), toCanvasY(My),11,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle="#700"; ctx.fillText(`ゴール (${Mx.toFixed(2)},${My.toFixed(1)})`, toCanvasX(Mx)-40, toCanvasY(My)-16);
-
-    ctx.fillStyle="#0a8"; ctx.beginPath(); ctx.arc(toCanvasX(xv), toCanvasY(yv),6,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle="#067"; ctx.fillText(`頂点 (${xv.toFixed(2)},${yv.toFixed(2)})`, toCanvasX(xv)+10, toCanvasY(yv)-8);
-
-    ctx.strokeStyle="#000"; ctx.lineWidth=3;
-    ctx.beginPath(); ctx.moveTo(toCanvasX(11), toCanvasY(0)); ctx.lineTo(toCanvasX(11), toCanvasY(10)); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(toCanvasX(10), toCanvasY(10)); ctx.lineTo(toCanvasX(11), toCanvasY(10)); ctx.stroke();
-
-    if(trail.length>0){
-        ctx.beginPath();
-        for(let i=0;i<trail.length;i++){
-            let p=trail[i];
-            if(i==0) ctx.moveTo(toCanvasX(p.x), toCanvasY(p.y));
-            else ctx.lineTo(toCanvasX(p.x), toCanvasY(p.y));
-        }
-        ctx.strokeStyle="#ff8c00"; ctx.lineWidth=3; ctx.stroke();
-    }
-
-    if(animing){
-        ctx.fillStyle="#ff6600"; ctx.beginPath();
-        ctx.arc(toCanvasX(animX), toCanvasY(parab(animX)),9,0,Math.PI*2); ctx.fill();
-    }
-
-    formulaBox.innerHTML = `y = ${a.toFixed(2)}(x - ${xv.toFixed(2)})² + ${yv.toFixed(2)}`;
-}
-
-function checkGoal(x,y){ return Math.hypot(x-Mx,y-My)<0.7; }
-function checkLineCollision(x,y){ return (x>=10 && x<=11 && Math.abs(y-10)<0.2) || (Math.abs(x-11)<0.2 && y>=0 && y<=10); }
-
-function animateStep(){
-    if(!animing) return;
-    animX += dxPerFrame;
-    let y=parab(animX);
-    trail.push({x:animX,y:y});
-    if(animX>15.001 || y<-1){
-        animing=false; showMessage("失敗","#d33"); draw(); return;
-    }
-    if(checkGoal(animX,y)){
-        animing=false; showMessage("ゴール！","#0a6"); draw(); return;
-    }
-    if(checkLineCollision(animX,y)){
-        animing=false; showMessage("バーに当たった！","#d33"); draw(); return;
-    }
-    draw();
-    requestAnimationFrame(animateStep);
-}
-
-function recomputeAll(){
-    Mx=parseFloat(document.getElementById('mx').value);
-    My=parseFloat(document.getElementById('my').value);
-    b=computeB();
-    computeVertex();
-    computePath();
-    animing=false; animX=0; trail=[]; hideMessage(); draw();
-}
-
-function startShoot(){
-    recomputeAll();
-    animX=0; trail=[]; animing=true;
-    requestAnimationFrame(animateStep);
-}
-
-function showMessage(txt,col){ bigmsg.style.display='block'; bigmsg.style.color=col; bigmsg.textContent=txt; }
-function hideMessage(){ bigmsg.style.display='none'; }
-
-function resetAll(){
-    animing=false; animX=0; trail=[]; hideMessage();
-    Mx=10.5; My=5;
-    document.getElementById('mx').value=Mx;
-    document.getElementById('my').value=My;
-    recomputeAll();
-}
-
-function toggle解説(){ 
-    const elem=document.getElementById('解説');
-    elem.style.display = (elem.style.display==="none")?"block":"none";
-}
-
-document.getElementById('mx').addEventListener('input', recomputeAll);
-document.getElementById('my').addEventListener('input', recomputeAll);
-document.getElementById('startBtn').addEventListener('click', startShoot);
-document.getElementById('resetBtn').addEventListener('click', resetAll);
-document.getElementById('axisToggle').addEventListener('change', ()=>{ showAxes=document.getElementById('axisToggle').checked; draw(); });
-document.getElementById('show解説').addEventListener('click', toggle解説);
-recomputeAll();
-</script>
-
-</body>
-</html>`;
-    } else if(name==='antenna'){
-        iframe.srcdoc = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>放物線アンテナと光線シミュレーション＋解説</title>
-<script src="https://cdn.jsdelivr.net/npm/p5@1.4.2/lib/p5.js"></script>
-<style>
-body { text-align: center; font-family: sans-serif; }
-canvas { border: 1px solid black; background: #f0f0f0; display:block; margin: 0 auto; }
-#controls { margin-top: 10px; }
-label { margin-right: 10px; }
-button { margin-left: 5px; margin-right:5px; }
-</style>
-</head>
-<body>
+<!-- 2つ目: 放物線アンテナ -->
+<div id="antenna" class="section">
 <h2>放物線アンテナと光線シミュレーション＋解説</h2>
 <div id="controls">
   <button id="simButton">シミュレーション表示</button>
@@ -251,17 +80,199 @@ button { margin-left: 5px; margin-right:5px; }
     <button id="resetButton">リセット</button>
   </span>
 </div>
+</div>
+
+<!-- 3つ目: モンテカルロ法 -->
+<div id="montecarlo" class="section">
+<h1>モンテカルロ法でπを求めよう（面積1方式）</h1>
+<p>赤：円の中、青：円の外</p>
+
+<div style="display:flex; gap:20px; flex-wrap:wrap; justify-content:center;">
+  <div>
+    <canvas id="canvas" width="400" height="400" style="border:1px solid #000;"></canvas>
+    <div style="margin-top:10px;">
+      <button onclick="addPoints(100)">100点追加</button>
+      <button onclick="resetAll()">リセット</button>
+      <button onclick="showPrinciple()">原理を解説</button>
+    </div>
+    <p id="piValue">πの近似値: 0</p>
+  </div>
+
+  <div>
+    <h3>πの近似値の推移</h3>
+    <canvas id="graph" width="400" height="400" style="border:1px solid #000;"></canvas>
+  </div>
+</div>
+
+<div id="principle" style="margin-top:20px; display:none; text-align:center; max-width:420px; margin:auto; border:1px solid #ccc; padding:10px; background:#f9f9f9;">
+  <canvas id="principleCanvas" width="200" height="200" style="border:1px solid #000;"></canvas>
+  <p id="principleText" style="text-align:left; margin-top:10px;"></p>
+  <p id="principleSummary" style="margin-top:10px; font-weight:bold; color:darkred;"></p>
+</div>
+</div>
 
 <script>
+// -------------------- メニュー切替 --------------------
+function showSection(id){
+    document.getElementById('menu').style.display='none';
+    ['soccer','antenna','montecarlo'].forEach(sec=>{
+        document.getElementById(sec).style.display=(sec===id)?'block':'none';
+    });
+}
+
+// -------------------- 1つ目: サッカー二次関数 --------------------
+const soccerCanvas = document.getElementById('cv');
+const soccerCtx = soccerCanvas.getContext('2d');
+const a = -0.6;
+let Mx = parseFloat(document.getElementById('mx').value);
+let My = parseFloat(document.getElementById('my').value);
+let b=0, xv=0, yv=0;
+let path = [], animing=false, animX=0, trail=[];
+let dxPerFrame = 0.05;
+const scaleX = (soccerCanvas.width-120)/15;
+const scaleY = (soccerCanvas.height-120)/30;
+const margin=60;
+let showAxes = document.getElementById('axisToggle').checked;
+const formulaBox = document.getElementById('formula');
+const bigmsg = document.getElementById('bigmsg');
+
+function computeB(){return (My + Math.abs(a)*Mx*Mx)/Mx;}
+function parab(x){return a*x*x + b*x;}
+function computeVertex(){xv=-b/(2*a); yv=parab(xv);}
+function computePath(){ path=[]; for(let x=0;x<=15;x+=0.02){path.push({x,y:parab(x)});} }
+function toCanvasX(x){return margin + x*scaleX;}
+function toCanvasY(y){return soccerCanvas.height - margin - y*scaleY;}
+
+function drawSoccer(){
+    soccerCtx.clearRect(0,0,soccerCanvas.width,soccerCanvas.height);
+
+    if(showAxes){
+        soccerCtx.strokeStyle="#ddd"; soccerCtx.lineWidth=1;
+        for(let x=0;x<=15;x++){soccerCtx.beginPath(); soccerCtx.moveTo(toCanvasX(x), margin/2); soccerCtx.lineTo(toCanvasX(x), soccerCanvas.height-margin/2); soccerCtx.stroke();}
+        for(let y=0;y<=30;y++){soccerCtx.beginPath(); soccerCtx.moveTo(margin/2, toCanvasY(y)); soccerCtx.lineTo(soccerCanvas.width-margin/2, toCanvasY(y)); soccerCtx.stroke();}
+        soccerCtx.fillStyle="#333"; soccerCtx.font="12px sans-serif";
+        for(let x=0;x<=15;x++){soccerCtx.fillText(x, toCanvasX(x)-6, soccerCanvas.height-margin+14);}
+        for(let y=0;y<=30;y++){soccerCtx.fillText(y, 6, toCanvasY(y)+4);}
+    }
+
+    // 放物線
+    soccerCtx.beginPath();
+    for(let i=0;i<path.length;i++){
+        let p=path[i];
+        if(i==0) soccerCtx.moveTo(toCanvasX(p.x), toCanvasY(p.y));
+        else soccerCtx.lineTo(toCanvasX(p.x), toCanvasY(p.y));
+    }
+    soccerCtx.setLineDash([6,6]);
+    soccerCtx.strokeStyle="#4b6fbf"; soccerCtx.lineWidth=2; soccerCtx.stroke();
+    soccerCtx.setLineDash([]);
+
+    // 人
+    soccerCtx.fillStyle="#000"; soccerCtx.beginPath(); soccerCtx.arc(toCanvasX(0), toCanvasY(0), 6,0,Math.PI*2); soccerCtx.fill();
+    soccerCtx.fillText(`選手 (0,0)`, toCanvasX(0)+10, toCanvasY(0)-8);
+
+    // ゴール
+    soccerCtx.fillStyle="#d9534f"; soccerCtx.beginPath(); soccerCtx.arc(toCanvasX(Mx), toCanvasY(My),11,0,Math.PI*2); soccerCtx.fill();
+    soccerCtx.fillStyle="#700"; soccerCtx.fillText(`ゴール (${Mx.toFixed(2)},${My.toFixed(1)})`, toCanvasX(Mx)-40, toCanvasY(My)-16);
+
+    // 頂点
+    soccerCtx.fillStyle="#0a8"; soccerCtx.beginPath(); soccerCtx.arc(toCanvasX(xv), toCanvasY(yv),6,0,Math.PI*2); soccerCtx.fill();
+    soccerCtx.fillStyle="#067"; soccerCtx.fillText(`頂点 (${xv.toFixed(2)},${yv.toFixed(2)})`, toCanvasX(xv)+10, toCanvasY(yv)-8);
+
+    // 黒線（ゴール枠）
+    soccerCtx.strokeStyle="#000"; soccerCtx.lineWidth=3;
+    soccerCtx.beginPath(); soccerCtx.moveTo(toCanvasX(11), toCanvasY(0)); soccerCtx.lineTo(toCanvasX(11), toCanvasY(10)); soccerCtx.stroke();
+    soccerCtx.beginPath(); soccerCtx.moveTo(toCanvasX(10), toCanvasY(10)); soccerCtx.lineTo(toCanvasX(11), toCanvasY(10)); soccerCtx.stroke();
+
+    // 弾道
+    if(trail.length>0){
+        soccerCtx.beginPath();
+        for(let i=0;i<trail.length;i++){
+            let p=trail[i];
+            if(i==0) soccerCtx.moveTo(toCanvasX(p.x), toCanvasY(p.y));
+            else soccerCtx.lineTo(toCanvasX(p.x), toCanvasY(p.y));
+        }
+        soccerCtx.strokeStyle="#ff8c00"; soccerCtx.lineWidth=3; soccerCtx.stroke();
+    }
+
+    if(animing){
+        soccerCtx.fillStyle="#ff6600"; soccerCtx.beginPath();
+        soccerCtx.arc(toCanvasX(animX), toCanvasY(parab(animX)),9,0,Math.PI*2); soccerCtx.fill();
+    }
+
+    formulaBox.innerHTML = `y = ${a.toFixed(2)}(x - ${xv.toFixed(2)})² + ${yv.toFixed(2)}`;
+}
+
+function checkGoal(x,y){ return Math.hypot(x-Mx,y-My)<0.7; }
+function checkLineCollision(x,y){ return (x>=10 && x<=11 && Math.abs(y-10)<0.2) || (Math.abs(x-11)<0.2 && y>=0 && y<=10); }
+
+function animateStep(){
+    if(!animing) return;
+    animX += dxPerFrame;
+    let y=parab(animX);
+    trail.push({x:animX,y:y});
+    if(animX>15.001 || y<-1){
+        animing=false; showMessage("失敗","#d33"); drawSoccer(); return;
+    }
+    if(checkGoal(animX,y)){
+        animing=false; showMessage("ゴール！","#0a6"); drawSoccer(); return;
+    }
+    if(checkLineCollision(animX,y)){
+        animing=false; showMessage("バーに当たった！","#d33"); drawSoccer(); return; // ★ リセットしない
+    }
+    drawSoccer();
+    requestAnimationFrame(animateStep);
+}
+
+function recomputeAll(){
+    Mx=parseFloat(document.getElementById('mx').value);
+    My=parseFloat(document.getElementById('my').value);
+    b=computeB();
+    computeVertex();
+    computePath();
+    animing=false; animX=0; trail=[]; hideMessage(); drawSoccer();
+}
+
+function startShoot(){
+    recomputeAll();
+    animX=0; trail=[]; animing=true;
+    requestAnimationFrame(animateStep);
+}
+
+function showMessage(txt,col){ bigmsg.style.display='block'; bigmsg.style.color=col; bigmsg.textContent=txt; }
+function hideMessage(){ bigmsg.style.display='none'; }
+
+function resetAllSoccer(){
+    animing=false; animX=0; trail=[]; hideMessage();
+    Mx=10.5; My=5;
+    document.getElementById('mx').value=Mx;
+    document.getElementById('my').value=My;
+    recomputeAll();
+}
+
+function toggle解説(){ 
+    const elem=document.getElementById('解説');
+    elem.style.display = (elem.style.display==="none")?"block":"none";
+}
+
+document.getElementById('mx').addEventListener('input', recomputeAll);
+document.getElementById('my').addEventListener('input', recomputeAll);
+document.getElementById('startBtn').addEventListener('click', startShoot);
+document.getElementById('resetBtn').addEventListener('click', resetAllSoccer);
+document.getElementById('axisToggle').addEventListener('change', ()=>{ showAxes=document.getElementById('axisToggle').checked; drawSoccer(); });
+document.getElementById('show解説').addEventListener('click', toggle解説);
+recomputeAll();
+
+// -------------------- 2つ目: 放物線アンテナ --------------------
 let mode = "sim"; 
 let rays = [];
-let p = 100; 
+let pAntenna = 100; 
 let showFocus = true;
 let sliderX = 0;
 let curveMode = "parabola";
 
 function setup() {
-  createCanvas(800,600);
+  let c = createCanvas(800,600);
+  c.parent(document.getElementById('antenna'));
 
   document.getElementById("simButton").addEventListener("click", ()=>{
     mode="sim"; document.getElementById("simControls").style.display="inline-block";
@@ -295,7 +306,7 @@ function setup() {
 
 function launchRay(x0){
   let y0;
-  y0 = -x0*x0/(4*p) - 300;
+  y0 = -x0*x0/(4*pAntenna) - 300;
   rays.push({ x:x0, y:y0, vx:0, vy:2, r:3, bounce:0, trail:[] });
 }
 
@@ -324,7 +335,7 @@ function drawAxes(){
 function drawParabola(){
   stroke("blue"); noFill(); beginShape();
   for(let x=-width/2; x<=width/2; x+=2){
-    let y = -x*x/(4*p);
+    let y = -x*x/(4*pAntenna);
     vertex(x,y);
   }
   endShape();
@@ -333,15 +344,15 @@ function drawParabola(){
 function drawTwoLines(){
   stroke("blue");
   line(-width/2, -200, 0, 200);  
-  line(0, 200, width/2, -200);  
+  line(0, 200, width/2, -200);   
 }
 
 function drawFocus(){
-  if(showFocus){ fill("red"); noStroke(); ellipse(0,-p,8,8); }
+  if(showFocus){ fill("red"); noStroke(); ellipse(0,-pAntenna,8,8); }
 }
 
 function drawLaunchMarker(){
-  let markerY = -sliderX*sliderX/(4*p) - 300;
+  let markerY = -sliderX*sliderX/(4*pAntenna) - 300;
   stroke("green");
   line(sliderX, markerY-10, sliderX, markerY+10);
   noStroke(); fill("green"); ellipse(sliderX, markerY, 6,6);
@@ -365,8 +376,8 @@ function updateRays(){
 
     let surfaceY, slope;
     if(curveMode==="parabola"){
-      surfaceY = -r.x*r.x/(4*p);
-      slope = -r.x/(2*p);
+      surfaceY = -r.x*r.x/(4*pAntenna);
+      slope = -r.x/(2*pAntenna);
     } else {
       surfaceY = -Math.abs(r.x) + 200; 
       slope = (r.x>=0) ? -1 : 1;
@@ -418,49 +429,12 @@ function drawExplanation(){
   line(300-80,180-40,300,180+80);
   line(300,180+80,300+80,180-40);
 }
-</script>
-</body>
-</html>`;
-    } else if(name==='montecarlo'){
-        iframe.srcdoc = `<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<title>モンテカルロ法でπを求める</title>
-</head>
-<body>
-<h1>モンテカルロ法でπを求めよう（面積1方式）</h1>
-<p>赤：円の中、青：円の外</p>
 
-<div style="display:flex; gap:20px;">
-  <div>
-    <canvas id="canvas" width="400" height="400" style="border:1px solid #000;"></canvas>
-    <div style="margin-top:10px;">
-      <button onclick="addPoints(100)">100点追加</button>
-      <button onclick="resetAll()">リセット</button>
-      <button onclick="showPrinciple()">原理を解説</button>
-    </div>
-    <p id="piValue">πの近似値: 0</p>
-  </div>
-
-  <div>
-    <h3>πの近似値の推移</h3>
-    <canvas id="graph" width="400" height="400" style="border:1px solid #000;"></canvas>
-  </div>
-</div>
-
-<div id="principle" style="margin-top:20px; display:none; text-align:center; max-width:420px; margin:auto; border:1px solid #ccc; padding:10px; background:#f9f9f9;">
-  <canvas id="principleCanvas" width="200" height="200" style="border:1px solid #000;"></canvas>
-  <p id="principleText" style="text-align:left; margin-top:10px;"></p>
-  <p id="principleSummary" style="margin-top:10px; font-weight:bold; color:darkred;"></p>
-</div>
-
-<script>
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-const size = canvas.width;
-const r = 0.5;
-
+// -------------------- 3つ目: モンテカルロ法 --------------------
+const mcCanvas = document.getElementById('canvas');
+const mcCtx = mcCanvas.getContext('2d');
+const mcSize = mcCanvas.width;
+const rMC = 0.5;
 let totalPoints = 0;
 let insideCircle = 0;
 let piHistory = [];
@@ -469,12 +443,12 @@ drawSquareAndCircle();
 drawGraph();
 
 function drawSquareAndCircle(){
-    ctx.clearRect(0,0,size,size);
-    ctx.strokeStyle = "black";
-    ctx.strokeRect(0,0,size,size);
-    ctx.beginPath();
-    ctx.arc(size/2, size/2, size*r, 0, Math.PI*2);
-    ctx.stroke();
+    mcCtx.clearRect(0,0,mcSize,mcSize);
+    mcCtx.strokeStyle = "black";
+    mcCtx.strokeRect(0,0,mcSize,mcSize);
+    mcCtx.beginPath();
+    mcCtx.arc(mcSize/2, mcSize/2, mcSize*rMC, 0, Math.PI*2);
+    mcCtx.stroke();
 }
 
 function addPoints(n){
@@ -484,13 +458,13 @@ function addPoints(n){
         let dx = x - 0.5;
         let dy = y - 0.5;
         totalPoints++;
-        if(dx*dx + dy*dy <= r*r){
+        if(dx*dx + dy*dy <= rMC*rMC){
             insideCircle++;
-            ctx.fillStyle = 'red';
+            mcCtx.fillStyle = 'red';
         } else {
-            ctx.fillStyle = 'blue';
+            mcCtx.fillStyle = 'blue';
         }
-        ctx.fillRect(x*size-2, y*size-2, 4, 4);
+        mcCtx.fillRect(x*mcSize-2, y*mcSize-2, 4, 4);
     }
     const piApprox = 4*insideCircle/totalPoints;
     piHistory.push({points: totalPoints, value: piApprox});
@@ -506,9 +480,9 @@ function drawGraph(){
     gctx.strokeStyle = 'black';
     gctx.beginPath();
     gctx.moveTo(50,graph.height-50);
-    gctx.lineTo(graph.width-10,graph.height-50);
+    gctx.lineTo(graph.width-10,graph.height-50); 
     gctx.moveTo(50,10);
-    gctx.lineTo(50,graph.height-50);
+    gctx.lineTo(50,graph.height-50); 
     gctx.stroke();
 
     gctx.fillStyle = 'black';
@@ -537,7 +511,6 @@ function drawGraph(){
     const latest = piHistory[piHistory.length-1];
     const lx = 50 + (latest.points - xMin)*xScale;
     const ly = graph.height - 50 - (latest.value - yMin)*yScale;
-
     gctx.fillStyle = 'red';
     gctx.beginPath();
     gctx.arc(lx, ly, 4, 0, Math.PI*2);
@@ -593,23 +566,21 @@ function showPrinciple() {
         pCtx.fillRect(x*pSize-2,y*pSize-2,4,4);
     }
 
-    const text = \`
+    const text = `
 モンテカルロ法でπを求める原理（面積1方式）
 
 1️⃣ 1辺1の正方形（面積1）を描く
 2️⃣ 正方形内にランダムに点を打つ
 3️⃣ 円の中か判定（赤：中、青：外）
 4️⃣ 赤い点の割合 ×4 でπを近似
-\`;
+`;
     document.getElementById('principleText').innerText = text;
     document.getElementById('principleSummary').innerText = "まとめ：点を増やすと、πの近似値はどんどん正確になります！";
-}
-</script>
-</body>
-</html>`;
-    }
 }
 </script>
 
 </body>
 </html>
+
+
+
