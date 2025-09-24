@@ -1,66 +1,411 @@
 <index html>
+
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>RGB実験</title>
+<title>統合シミュレーション選択ページ</title>
 <style>
-  html, body {
-    margin: 0; padding: 0; height: 100%; width: 100%;
-  }
-  #display {
-    width: 100%; height: 100%; background-color: black; transition: background-color 0.5s;
-  }
-  #buttons {
-    position: fixed; bottom: 10px; left: 0; width: 100%;
-    display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;
-  }
-  button {
-    padding: 15px 20px; font-size: 18px; cursor: pointer;
-  }
+body { font-family:sans-serif; text-align:center; background:#f7f7f7; }
+button { font-size:20px; margin:10px; padding:10px 20px; }
+iframe { border:1px solid #ccc; width:1000px; height:750px; margin-top:20px; display:none; }
 </style>
 </head>
 <body>
-<div id="display"></div>
-<div id="buttons">
-  <button id="btn-red">赤</button>
-  <button id="btn-green">緑</button>
-  <button id="btn-blue">青</button>
-  <button id="btn-cyan">シアン</button>
-  <button id="btn-magenta">マゼンタ</button>
-  <button id="btn-yellow">イエロー</button>
-  <button id="btn-white">白</button>
-  <button id="btn-auto">連続</button>
+<h1>統合シミュレーション選択ページ</h1>
+<p>表示したいシミュレーションを選んでください。</p>
+
+<button onclick="showSim('soccer')">⚽ サッカー二次関数シュート</button>
+<button onclick="showSim('antenna')">📡 放物線アンテナと光線</button>
+<button onclick="showSim('montecarlo')">🎲 モンテカルロ法でπを求める</button>
+
+<!-- サッカー二次関数 -->
+<iframe id="soccerFrame" srcdoc='
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>サッカー二次関数シミュレーション</title>
+<style>
+body { font-family:sans-serif; text-align:center; background:#f7f7f7; }
+canvas { background:#fff; border:1px solid #bbb; }
+.controls { margin-top:10px; }
+button,input[type=range] { margin:5px; }
+#formula { position:absolute; background:rgba(255,255,255,0.8); padding:4px; font-weight:bold; bottom:40px; left:60px; }
+#bigmsg { position:absolute; left:50%; top:45%; transform:translate(-50%,-50%); font-size:48px; font-weight:bold; color:#0a6; display:none; }
+</style>
+</head>
+<body>
+
+<h2>⚽ サッカーと二次関数</h2>
+<div style="position:relative; display:inline-block;">
+<canvas id="cv" width="900" height="600"></canvas>
+<div id="formula"></div>
+<div id="bigmsg"></div>
+</div>
+
+<div class="controls">
+<label>目標 X:<input id="mx" type="range" min="10.1" max="10.9" step="0.01" value="10.5"></label><br>
+<label>目標 Y:<input id="my" type="range" min="0.1" max="9.9" step="0.1" value="5"></label><br>
+<button id="startBtn" style="font-size:20px; background:#ff8;">シュート</button>
+<button id="resetBtn">リセット</button>
+<label><input id="axisToggle" type="checkbox" checked> 座標軸表示</label>
+<button id="show解説">解説</button>
+</div>
+
+<div id="解説" style="display:none; max-width:800px; margin:auto; text-align:left; background:#f9f9f9; border:1px solid #ccc; padding:10px; border-radius:8px; margin-top:10px;">
+<h3>サッカーと二次関数の解説</h3>
+<p>⚽ サッカーのシュートは、ボールが放物線を描く運動の代表例です。</p>
+<ul>
+<li>放物線の一番高い点を <span style="color:red;">頂点</span> と呼びます。</li>
+<li>平方完成をすると頂点の座標が求めやすくなります。</li>
+</ul>
+<p style="text-align:center; font-weight:bold;">
+y = -0.6 (x - b/1.2)<sup>2</sup> + b<sup>2</sup>/1.2
+</p>
+<p>ゴール（目標点）を決めると放物線は一意に定まります。</p>
+<p>放物線の頂点はボールの最高到達点であり、ゴールを通るかどうかを決める重要な要素です。</p>
+<div style="border:1px solid #444; border-radius:10px; padding:10px; margin-top:10px; background:#f9f9f9;">
+<h4>💡 他の身近な放物線</h4>
+<ul>
+<li>噴水の水の軌道</li>
+<li>野球のフライ</li>
+<li>バスケットボールのシュート</li>
+</ul>
+</div>
 </div>
 
 <script>
-const display = document.getElementById('display');
-let autoInterval = null;
+const canvas = document.getElementById("cv");
+const ctx = canvas.getContext("2d");
+const a = -0.6;
+let Mx = parseFloat(document.getElementById("mx").value);
+let My = parseFloat(document.getElementById("my").value);
+let b=0, xv=0, yv=0;
+let path = [], animing=false, animX=0, trail=[];
+let dxPerFrame = 0.05;
+const scaleX = (canvas.width-120)/15;
+const scaleY = (canvas.height-120)/30;
+const margin=60;
+let showAxes = document.getElementById("axisToggle").checked;
+const formulaBox = document.getElementById("formula");
+const bigmsg = document.getElementById("bigmsg");
 
-const setColor = (color) => {
-  clearInterval(autoInterval);
-  display.style.backgroundColor = color;
-};
+function computeB(){return (My + Math.abs(a)*Mx*Mx)/Mx;}
+function parab(x){return a*x*x + b*x;}
+function computeVertex(){xv=-b/(2*a); yv=parab(xv);}
+function computePath(){ path=[]; for(let x=0;x<=15;x+=0.02){path.push({x,y:parab(x)});} }
+function toCanvasX(x){return margin + x*scaleX;}
+function toCanvasY(y){return canvas.height - margin - y*scaleY;}
 
-document.getElementById('btn-red').addEventListener('click', () => setColor('rgb(255,0,0)'));
-document.getElementById('btn-green').addEventListener('click', () => setColor('rgb(0,255,0)'));
-document.getElementById('btn-blue').addEventListener('click', () => setColor('rgb(0,0,255)'));
-document.getElementById('btn-cyan').addEventListener('click', () => setColor('rgb(0,255,255)'));
-document.getElementById('btn-magenta').addEventListener('click', () => setColor('rgb(255,0,255)'));
-document.getElementById('btn-yellow').addEventListener('click', () => setColor('rgb(255,255,0)'));
-document.getElementById('btn-white').addEventListener('click', () => setColor('rgb(255,255,255)'));
+function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
 
-document.getElementById('btn-auto').addEventListener('click', () => {
-  clearInterval(autoInterval);
-  let r=255, g=0, b=0;
-  let dr=-1, dg=1, db=0;
-  autoInterval = setInterval(() => {
-    r+=dr; g+=dg; b+=db;
-    if (r===255 && g===0 && b===0){ dr=-1; dg=1; db=0; }
-    if (r===0 && g===255 && b===0){ dr=0; dg=-1; db=1; }
-    if (r===0 && g===0 && b===255){ dr=1; dg=0; db=-1; }
-    display.style.backgroundColor = `rgb(${r},${g},${b})`;
-  }, 10);
-});
+    if(showAxes){
+        ctx.strokeStyle="#ddd"; ctx.lineWidth=1;
+        for(let x=0;x<=15;x++){ctx.beginPath(); ctx.moveTo(toCanvasX(x), margin/2); ctx.lineTo(toCanvasX(x), canvas.height-margin/2); ctx.stroke();}
+        for(let y=0;y<=30;y++){ctx.beginPath(); ctx.moveTo(margin/2, toCanvasY(y)); ctx.lineTo(canvas.width-margin/2, toCanvasY(y)); ctx.stroke();}
+        ctx.fillStyle="#333"; ctx.font="12px sans-serif";
+        for(let x=0;x<=15;x++){ctx.fillText(x, toCanvasX(x)-6, canvas.height-margin+14);}
+        for(let y=0;y<=30;y++){ctx.fillText(y, 6, toCanvasY(y)+4);}
+    }
+
+    // 放物線
+    ctx.beginPath();
+    for(let i=0;i<path.length;i++){
+        let p=path[i];
+        if(i==0) ctx.moveTo(toCanvasX(p.x), toCanvasY(p.y));
+        else ctx.lineTo(toCanvasX(p.x), toCanvasY(p.y));
+    }
+    ctx.setLineDash([6,6]);
+    ctx.strokeStyle="#4b6fbf"; ctx.lineWidth=2; ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 人
+    ctx.fillStyle="#000"; ctx.beginPath(); ctx.arc(toCanvasX(0), toCanvasY(0), 6,0,Math.PI*2); ctx.fill();
+    ctx.fillText(`選手 (0,0)`, toCanvasX(0)+10, toCanvasY(0)-8);
+
+    // ゴール
+    ctx.fillStyle="#d9534f"; ctx.beginPath(); ctx.arc(toCanvasX(Mx), toCanvasY(My),11,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="#700"; ctx.fillText(`ゴール (${Mx.toFixed(2)},${My.toFixed(1)})`, toCanvasX(Mx)-40, toCanvasY(My)-16);
+
+    // 頂点
+    ctx.fillStyle="#0a8"; ctx.beginPath(); ctx.arc(toCanvasX(xv), toCanvasY(yv),6,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="#067"; ctx.fillText(`頂点 (${xv.toFixed(2)},${yv.toFixed(2)})`, toCanvasX(xv)+10, toCanvasY(yv)-8);
+
+    // 黒線（ゴール枠）
+    ctx.strokeStyle="#000"; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(toCanvasX(11), toCanvasY(0)); ctx.lineTo(toCanvasX(11), toCanvasY(10)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(toCanvasX(10), toCanvasY(10)); ctx.lineTo(toCanvasX(11), toCanvasY(10)); ctx.stroke();
+
+    // 弾道
+    if(trail.length>0){
+        ctx.beginPath();
+        for(let i=0;i<trail.length;i++){
+            let p=trail[i];
+            if(i==0) ctx.moveTo(toCanvasX(p.x), toCanvasY(p.y));
+            else ctx.lineTo(toCanvasX(p.x), toCanvasY(p.y));
+        }
+        ctx.strokeStyle="#ff8c00"; ctx.lineWidth=3; ctx.stroke();
+    }
+
+    if(animing){
+        ctx.fillStyle="#ff6600"; ctx.beginPath();
+        ctx.arc(toCanvasX(animX), toCanvasY(parab(animX)),9,0,Math.PI*2); ctx.fill();
+    }
+
+    formulaBox.innerHTML = `y = ${a.toFixed(2)}(x - ${xv.toFixed(2)})² + ${yv.toFixed(2)}`;
+}
+
+function checkGoal(x,y){ return Math.hypot(x-Mx,y-My)<0.7; }
+function checkLineCollision(x,y){ return (x>=10 && x<=11 && Math.abs(y-10)<0.2) || (Math.abs(x-11)<0.2 && y>=0 && y<=10); }
+
+function animateStep(){
+    if(!animing) return;
+    animX += dxPerFrame;
+    let y=parab(animX);
+    trail.push({x:animX,y:y});
+    if(animX>15.001 || y<-1){
+        animing=false; showMessage("失敗","#d33"); draw(); return;
+    }
+    if(checkGoal(animX,y)){
+        animing=false; showMessage("ゴール！","#0a6"); draw(); return;
+    }
+    if(checkLineCollision(animX,y)){
+        animing=false; showMessage("バーに当たった！","#d33"); draw(); return;
+    }
+    draw();
+    requestAnimationFrame(animateStep);
+}
+
+function recomputeAll(){
+    Mx=parseFloat(document.getElementById("mx").value);
+    My=parseFloat(document.getElementById("my").value);
+    b=computeB();
+    computeVertex();
+    computePath();
+    animing=false; animX=0; trail=[]; hideMessage(); draw();
+}
+
+function startShoot(){
+    recomputeAll();
+    animX=0; trail=[]; animing=true;
+    requestAnimationFrame(animateStep);
+}
+
+function showMessage(txt,col){ bigmsg.style.display="block"; bigmsg.style.color=col; bigmsg.textContent=txt; }
+function hideMessage(){ bigmsg.style.display="none"; }
+
+function resetAll(){
+    animing=false; animX=0; trail=[]; hideMessage();
+    Mx=10.5; My=5;
+    document.getElementById("mx").value=Mx;
+    document.getElementById("my").value=My;
+    recomputeAll();
+}
+
+function toggle解説(){ 
+    const elem=document.getElementById("解説");
+    elem.style.display = (elem.style.display==="none")?"block":"none";
+}
+
+document.getElementById("mx").addEventListener("input", recomputeAll);
+document.getElementById("my").addEventListener("input", recomputeAll);
+document.getElementById("startBtn").addEventListener("click", startShoot);
+document.getElementById("resetBtn").addEventListener("click", resetAll);
+document.getElementById("axisToggle").addEventListener("change", ()=>{ showAxes=document.getElementById("axisToggle").checked; draw(); });
+document.getElementById("show解説").addEventListener("click", toggle解説);
+
+recomputeAll();
 </script>
+</html>
+'></iframe>
+
+<!-- 放物線アンテナ -->
+<iframe id="antennaFrame" srcdoc='
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>放物線アンテナと光線シミュレーション＋解説</title>
+<script src="https://cdn.jsdelivr.net/npm/p5@1.4.2/lib/p5.js"></script>
+<style>
+body { text-align: center; font-family: sans-serif; }
+canvas { border: 1px solid black; background: #f0f0f0; display:block; margin: 0 auto; }
+#controls { margin-top: 10px; }
+label { margin-right: 10px; }
+button { margin-left: 5px; margin-right:5px; }
+</style>
+</head>
+<body>
+<h2>放物線アンテナと光線シミュレーション＋解説</h2>
+<div id="controls">
+  <button id="simButton">シミュレーション表示</button>
+  <button id="explainButton">解説表示</button>
+  <span id="simControls" style="display:inline-block;">
+    <label for="xSlider">x座標:</label>
+    <input type="range" id="xSlider" min="-100" max="100" value="0" step="1" style="width:300px;">
+    <span id="xValue">0</span>
+    <button id="dropButton">発射</button>
+    <button id="superButton">スーパー発射</button>
+    <button id="toggleFocus">焦点表示切替</button>
+    <button id="lineButton">放物線/直線切替</button>
+    <button id="resetButton">リセット</button>
+  </span>
+</div>
+
+<script>
+let mode = "sim"; 
+let rays = [];
+let p = 100; 
+let showFocus = true;
+let sliderX = 0;
+let curveMode = "parabola";
+
+function setup() {
+  createCanvas(800,600);
+
+  document.getElementById("simButton").addEventListener("click", ()=>{ mode="sim"; document.getElementById("simControls").style.display="inline-block"; });
+  document.getElementById("explainButton").addEventListener("click", ()=>{ mode="explain"; document.getElementById("simControls").style.display="none"; });
+
+  sliderX = parseFloat(document.getElementById("xSlider").value);
+  document.getElementById("xSlider").addEventListener("input", ()=>{ sliderX = parseFloat(document.getElementById("xSlider").value); document.getElementById("xValue").innerText = sliderX; });
+
+  document.getElementById("dropButton").addEventListener("click", ()=>{ launchRay(sliderX); });
+  document.getElementById("superButton").addEventListener("click", ()=>{ for(let i=-100;i<=100;i+=20){ launchRay(i); } });
+
+  document.getElementById("toggleFocus").addEventListener("click", ()=>{ showFocus = !showFocus; });
+  document.getElementById("resetButton").addEventListener("click", ()=>{ rays = []; });
+  document.getElementById("lineButton").addEventListener("click", ()=>{ curveMode = (curveMode==="parabola" ? "line" : "parabola"); });
+}
+
+function launchRay(x0){
+  let y0 = -x0*x0/(4*p) - 300;
+  rays.push({ x:x0, y:y0, vx:0, vy:2, r:3, bounce:0, trail:[] });
+}
+
+function draw() {
+  background(240);
+  if(mode=="sim") drawSimulation();
+  else drawExplanation();
+}
+
+function drawSimulation(){
+  translate(width/2, height/2);
+  drawAxes();
+  if(curveMode==="parabola") drawParabola(); else drawTwoLines();
+  if(curveMode==="parabola") drawFocus();
+  for(let ray of rays){
+    ray.y += ray.vy; ray.trail.push({x:ray.x,y:ray.y});
+    fill(255,0,0); noStroke(); ellipse(ray.x, ray.y, ray.r*2);
+    stroke(255,0,0); noFill(); beginShape(); for(let p of ray.trail){ vertex(p.x,p.y); } endShape();
+    if(ray.y>=(-ray.x*ray.x/(4*p))){ ray.vy*=-1; ray.bounce+=1; if(ray.bounce>3) ray.vy=0; }
+  }
+}
+
+function drawAxes(){
+  stroke(180); line(-width/2,0,width/2,0); line(0,-height/2,0,height/2);
+}
+
+function drawParabola(){
+  noFill(); stroke(0); beginShape();
+  for(let x=-200;x<=200;x+=1){ vertex(x,-x*x/(4*p)); }
+  endShape();
+}
+
+function drawTwoLines(){
+  stroke(0); line(-200,50,200,50); line(-100,-100,100,-100);
+}
+
+function drawFocus(){
+  if(showFocus){
+    fill(0,255,0); noStroke(); ellipse(0,p,10,10);
+  }
+}
+
+function drawExplanation(){
+  background(255); fill(0); textSize(16); textAlign(LEFT,TOP);
+  text("放物線アンテナは、放物線の焦点に向かって光や電波を集める特性があります。\nシミュレーションでは、光線が反射して焦点に集まる様子を確認できます。",20,20);
+}
+</script>
+</body>
+</html>
+'></iframe>
+
+<!-- モンテカルロ法でπ -->
+<iframe id="monteFrame" srcdoc='
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>モンテカルロ法でπ</title>
+<style>
+body { font-family:sans-serif; text-align:center; }
+canvas { background:#fff; border:1px solid #000; display:block; margin:auto; }
+#controls { margin-top:10px; }
+#chart { margin-top:20px; width:700px; height:300px; border:1px solid #ccc; margin:auto; }
+</style>
+</head>
+<body>
+<h2>モンテカルロ法でπを求めるシミュレーション</h2>
+<canvas id="cv" width="400" height="400"></canvas>
+<div id="controls">
+<button id="start">開始</button>
+<label>試行数: <input type="number" id="step" value="100" min="10"></label>
+</div>
+<canvas id="chart" width="700" height="300"></canvas>
+
+<script>
+const cv = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+const chart = document.getElementById("chart");
+const cctx = chart.getContext("2d");
+let N=0, inside=0;
+
+function drawCircle(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.strokeStyle="#000"; ctx.beginPath(); ctx.arc(200,200,200,0,2*Math.PI); ctx.stroke();
+}
+
+function monteStep(n){
+  for(let i=0;i<n;i++){
+    let x=Math.random()*2-1;
+    let y=Math.random()*2-1;
+    let px = 200 + x*200; let py = 200 - y*200;
+    ctx.fillStyle=(x*x+y*y<=1)?"#0a0":"#a00"; ctx.fillRect(px,py,2,2);
+    N++; if(x*x+y*y<=1) inside++;
+  }
+}
+
+function drawChart(){
+  cctx.clearRect(0,0,chart.width,chart.height);
+  let piEst = 4*inside/N;
+  cctx.beginPath(); cctx.moveTo(0,chart.height*(1-piEst/4)); cctx.lineTo(chart.width,chart.height*(1-piEst/4)); cctx.strokeStyle="#00f"; cctx.stroke();
+  cctx.fillStyle="#000"; cctx.fillText("π ≈ "+piEst.toFixed(5),10,20);
+}
+
+document.getElementById("start").addEventListener("click", ()=>{
+  let step=parseInt(document.getElementById("step").value);
+  monteStep(step);
+  drawChart();
+});
+
+drawCircle();
+</script>
+</body>
+</html>
+'></iframe>
+
+<script>
+function showSim(name){
+    document.getElementById("soccerFrame").style.display="none";
+    document.getElementById("antennaFrame").style.display="none";
+    document.getElementById("monteFrame").style.display="none";
+
+    if(name==="soccer") document.getElementById("soccerFrame").style.display="block";
+    if(name==="antenna") document.getElementById("antennaFrame").style.display="block";
+    if(name==="montecarlo") document.getElementById("monteFrame").style.display="block";
+}
+</script>
+
 </body>
 </html>
